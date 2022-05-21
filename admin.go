@@ -21,7 +21,7 @@ type admin struct {
 
 
 func init(){	
-	tpl = template.Must(template.ParseGlob("templates/*"))
+	tpl = template.Must(template.ParseGlob("templates/*.gohtml"))
 }
 
 
@@ -79,6 +79,7 @@ func signup(w http.ResponseWriter, req *http.Request) {
 		// get form values
 		un := req.FormValue("username")
 		p := req.FormValue("password")
+		fmt.Println("reaching in method post")
 	
 		// username taken?
 		if _, ok := dbUsers[un]; ok {
@@ -94,6 +95,8 @@ func signup(w http.ResponseWriter, req *http.Request) {
 		http.SetCookie(w, c)
 		dbSessions[c.Value] = un
 		// store user in dbUsers
+		fmt.Println("reaching in method ")
+
 		bs, err := bcrypt.GenerateFromPassword([]byte(p), bcrypt.MinCost)
 		if err != nil {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -105,7 +108,10 @@ func signup(w http.ResponseWriter, req *http.Request) {
 		http.Redirect(w, req, "/", http.StatusSeeOther)
 		return
 	}
+	fmt.Println("reaching ")
+
 	tpl.ExecuteTemplate(w, "signup.gohtml", u)
+
 }
 
 func login(w http.ResponseWriter, req *http.Request) {

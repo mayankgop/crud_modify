@@ -42,8 +42,12 @@ func main() {
 
 	r := mux.NewRouter()
 
-	// r.HandleFunc("/", index).Methods("GET")
-	r.HandleFunc("/create", create).Methods("POST") //inserting values into users_data table
+	r.HandleFunc("/", index).Methods("GET")
+	r.HandleFunc("/login",login).Methods("GET")
+	r.HandleFunc("/signup", signup)
+
+
+	r.HandleFunc("/create", create) //inserting values into users_data table
 	 r.HandleFunc("/read", read).Methods("GET")          // reading all values from users_data table
 	 r.HandleFunc("/del/{mid}", delet).Methods("GET") // deleting values by id from books table
 	// r.HandleFunc("/book/{mid}", getbyid).Methods("GET")  // reading values by id from books table
@@ -58,12 +62,12 @@ func main() {
 }
 
 func create(w http.ResponseWriter, req *http.Request) {
-	// d:= getUser(w, req)
-	// if !alreadyLoggedIn(req) {
-	// 	http.Redirect(w, req, "/", http.StatusSeeOther)
-	// 	return
-	// }
-	// tpl.ExecuteTemplate(w, "bar.gohtml", d)
+	d:= getUser(w, req)
+	if !alreadyLoggedIn(req) {
+		http.Redirect(w, req, "/", http.StatusSeeOther)
+		return
+	}
+	tpl.ExecuteTemplate(w, "bar.gohtml", d)
 	var u user
 	_ = json.NewDecoder(req.Body).Decode(&u)
 
@@ -73,7 +77,6 @@ func create(w http.ResponseWriter, req *http.Request) {
 	rows,err:=db.Query("select count(*) from users_data where ?=users_data.email",u.Email)
 	if err!=nil{
 		log.Fatal(err)
-
 	}
 	var count int
 	defer rows.Close()
@@ -88,7 +91,7 @@ func create(w http.ResponseWriter, req *http.Request) {
 		return
 	}else{
 
-		l:=len(u.Email)
+		// l:=len(u.Email)
 		
 	}
 
@@ -112,12 +115,12 @@ func read(w http.ResponseWriter, req *http.Request) {
 	var u user
 	err := json.NewDecoder(req.Body).Decode(&u)
 	
-	// d:= getUser(w, req)
-	// if !alreadyLoggedIn(req) {
-	// 	http.Redirect(w, req, "/", http.StatusSeeOther)
-	// 	return
-	// }
-	// tpl.ExecuteTemplate(w, "bar.gohtml", d)
+	d:= getUser(w, req)
+	if !alreadyLoggedIn(req) {
+		http.Redirect(w, req, "/", http.StatusSeeOther)
+		return
+	}
+	tpl.ExecuteTemplate(w, "bar.gohtml", d)
 
 
 	db, err := sql.Open("mysql", "admin:qwerty123@tcp(localhost:3306)/bookstore?charset=utf8")
