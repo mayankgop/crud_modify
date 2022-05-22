@@ -6,12 +6,13 @@
 </head>
 <body>
 
-<h1>Welcome to the bar. What can I get you to drink?</h1>
+<h1>Welcome to the bar</h1>
 
-{{if .First}}
-USER NAME {{.UserName}}<br>
-FIRST {{.First}}<br>
-LAST {{.Last}}<br>
+{{if .Id}}
+NAME {{.First_name}}<br>
+LAST {{.Last_name}}<br>
+Mail {{.Email}}<br>
+Dob {{.Dob}}<br>
 <h2><a href="/logout">log out</a></h2>
 {{end}}
 

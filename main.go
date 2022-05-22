@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"log"
 	"net/http"
@@ -36,6 +37,8 @@ func init() {
 	if err != nil {
 		fmt.Println("error in opening database")
 	}
+	file,_:=os.Create("file.log")
+	log.SetOutput(file)
 }
 
 func main() {
@@ -43,8 +46,9 @@ func main() {
 	r := mux.NewRouter()
 
 	r.HandleFunc("/", index).Methods("GET")
-	r.HandleFunc("/login",login).Methods("GET")
+	r.HandleFunc("/login",login)
 	r.HandleFunc("/signup", signup)
+	r.HandleFunc("/logout", logout)
 
 
 	r.HandleFunc("/create", create) //inserting values into users_data table
@@ -62,13 +66,13 @@ func main() {
 }
 
 func create(w http.ResponseWriter, req *http.Request) {
-	d:= getUser(w, req)
+	// d:= getUser(w, req)
 	if !alreadyLoggedIn(req) {
 		http.Redirect(w, req, "/", http.StatusSeeOther)
 		return
 	}
-	tpl.ExecuteTemplate(w, "bar.gohtml", d)
 	var u user
+	tpl.ExecuteTemplate(w, "bar.gohtml", u)
 	_ = json.NewDecoder(req.Body).Decode(&u)
 
 
@@ -87,21 +91,35 @@ func create(w http.ResponseWriter, req *http.Request) {
 	}
 	// fmt.Printf("total count is %d",count)
 	if count>0{
-		fmt.Println("email already in use")
+		log.Println("email already in use")
 		return
-	}else{
-
-		// l:=len(u.Email)
-		
 	}
+	l:=len(u.Email)
+	if l>20{
+		log.Println("length greater than 20")
+		return
+	}
+	u.Archived="fal"
 
+	lf:=len(u.First_name)  //length of first name
+	ll:=len(u.Last_name)   //length of last name
+	if lf+ll>30{
+		log.Println("name should be less than 30")
+		return
 
-
+	}
+	lp:=len(u.Password)
+	if lp<8 && lp>20 {
+		log.Println("password not in range")
+		return
+	}
+	
+		
 	query := "Insert into users_data(user_id,first_name,last_name,email,passw,dob,archived) values(?,?,?,?,?,?,?)"
 	_, b := db.Exec(query,u.Id,u.First_name, u.Last_name, u.Email,u.Password,u.Dob,u.Archived) //cascade injection
 
 	if b != nil {
-		fmt.Println("error found in create\n", b)
+		log.Println("error found in create\n", b)
 		return
 	}
 
@@ -113,7 +131,7 @@ func create(w http.ResponseWriter, req *http.Request) {
 
 func read(w http.ResponseWriter, req *http.Request) {
 	var u user
-	err := json.NewDecoder(req.Body).Decode(&u)
+	_= json.NewDecoder(req.Body).Decode(&u)
 	
 	d:= getUser(w, req)
 	if !alreadyLoggedIn(req) {
@@ -123,10 +141,6 @@ func read(w http.ResponseWriter, req *http.Request) {
 	tpl.ExecuteTemplate(w, "bar.gohtml", d)
 
 
-	db, err := sql.Open("mysql", "admin:qwerty123@tcp(localhost:3306)/bookstore?charset=utf8")
-	if err != nil {
-		fmt.Println(err)
-	}
 
 	x, b := db.Query("select * from users_data")
 
@@ -150,12 +164,9 @@ func delet(w http.ResponseWriter, req *http.Request) {
 	var u user
 	m := mux.Vars(req)
 	fmt.Println(m["mid"])
-	err := json.NewDecoder(req.Body).Decode(&u)
-	// fmt.Println(u)
-	db, err := sql.Open("mysql", "admin:qwerty123@tcp(localhost:3306)/bookstore?charset=utf8")
-	if err != nil {
-		fmt.Println(err)
-	}
+	_= json.NewDecoder(req.Body).Decode(&u)
+	fmt.Println(u)
+
 	x, _ := strconv.Atoi(m["mid"])
 	query := fmt.Sprintf("DELETE FROM users_data WHERE user_id=%d", x)
 	_, b := db.Exec(query)
