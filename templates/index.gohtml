@@ -8,7 +8,6 @@
 
 {{if .UserName}}
 USER NAME {{.UserName}}<br>
-PASSWORD {{.Password}}<br>
 
 <h2><a href="/logout">log out</a></h2>
 {{else}}
@@ -18,7 +17,8 @@ PASSWORD {{.Password}}<br>
 
 <br>
 <h2>Go to <a href="/create">create</a></h2>
-<h2>Go to <a href="/read">read</a></h2>
+<h2>Go to <a href="/read">read in format of /read/limit/offset</a></h2>
+<h2>Go to <a href="/delet">delete in format of /delet/id</a></h2>
 
 </body>
 </html>

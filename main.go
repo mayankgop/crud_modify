@@ -45,14 +45,16 @@ func main() {
 
 	r := mux.NewRouter()
 
-	r.HandleFunc("/", index).Methods("GET")
+	r.HandleFunc("/", index)
 	r.HandleFunc("/login",login)
 	r.HandleFunc("/signup", signup)
 	r.HandleFunc("/logout", logout)
 
 
 	r.HandleFunc("/create", create) //inserting values into users_data table
-	 r.HandleFunc("/read", read).Methods("GET")          // reading all values from users_data table
+	 r.HandleFunc("/read/{l}/{o}", read)        // reading all values from users_data table
+	 r.HandleFunc("/logout", logout)   //running read template
+
 	 r.HandleFunc("/del/{mid}", delet).Methods("GET") // deleting values by id from books table
 	// r.HandleFunc("/book/{mid}", getbyid).Methods("GET")  // reading values by id from books table
 	// r.HandleFunc("/book/{mid}", upd).Methods("PUT")      // updating values by id from books table
@@ -65,20 +67,44 @@ func main() {
 	}
 }
 
+
+
+
+
+
 func create(w http.ResponseWriter, req *http.Request) {
-	// d:= getUser(w, req)
+
 	if !alreadyLoggedIn(req) {
 		http.Redirect(w, req, "/", http.StatusSeeOther)
 		return
 	}
+	fmt.Println("means logged in")
+
+
 	var u user
-	tpl.ExecuteTemplate(w, "bar.gohtml", u)
-	_ = json.NewDecoder(req.Body).Decode(&u)
+	if req.Method == http.MethodPost {
+
+	// tpl.ExecuteTemplate(w, "bar.gohtml", u)
+	// _ = json.NewDecoder(req.Body).Decode(&u)
 
 
+	u.Email = req.FormValue("Email")
+	u.First_name= req.FormValue("password")
+	u.Last_name = req.FormValue("f_name")
+	u.Password= req.FormValue("l_name")
+	u.Dob= req.FormValue("dob")
+
+	fmt.Println("email is ",u.Email)
+	e:=req.FormValue("Email")
+	fmt.Println(e)
+	f:=req.FormValue("f_name")
+	fmt.Println(f)
+	fmt.Println("reached after email")
 	bs, _ := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.MinCost)
 	u.Password=string(bs)
 	rows,err:=db.Query("select count(*) from users_data where ?=users_data.email",u.Email)
+
+
 	if err!=nil{
 		log.Fatal(err)
 	}
@@ -92,6 +118,7 @@ func create(w http.ResponseWriter, req *http.Request) {
 	// fmt.Printf("total count is %d",count)
 	if count>0{
 		log.Println("email already in use")
+		fmt.Println("email already in use")
 		return
 	}
 	l:=len(u.Email)
@@ -103,50 +130,80 @@ func create(w http.ResponseWriter, req *http.Request) {
 
 	lf:=len(u.First_name)  //length of first name
 	ll:=len(u.Last_name)   //length of last name
+
 	if lf+ll>30{
 		log.Println("name should be less than 30")
 		return
 
 	}
 	lp:=len(u.Password)
-	if lp<8 && lp>20 {
+	if lp<8 || lp>20 {
 		log.Println("password not in range")
 		return
 	}
-	
+	fmt.Println("reached before query")
 		
-	query := "Insert into users_data(user_id,first_name,last_name,email,passw,dob,archived) values(?,?,?,?,?,?,?)"
-	_, b := db.Exec(query,u.Id,u.First_name, u.Last_name, u.Email,u.Password,u.Dob,u.Archived) //cascade injection
+	query := "Insert into users_data(first_name,last_name,email,passw,dob,archived) values(?,?,?,?,?,?)"
+	_, err = db.Exec(query,u.First_name, u.Last_name, u.Email,u.Password,u.Dob,u.Archived) //cascade injection
 
-	if b != nil {
-		log.Println("error found in create\n", b)
+	
+	if err!= nil {
+		log.Println("error found in create\n", err)
 		return
 	}
 
-	uj, _ := json.Marshal(u)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, "%s", uj)
+	http.Redirect(w, req, "/r", http.StatusSeeOther)
 }
+	tpl.ExecuteTemplate(w, "entry.gohtml", u)
+
+	// uj, _ := json.Marshal(u)
+	// w.Header().Set("Content-Type", "application/json")
+	// w.WriteHeader(http.StatusCreated)
+	// fmt.Fprintf(w, "%s", uj)
+}
+
+
+
+// func r(w http.ResponseWriter, req *http.Request) {
+// 	var u user
+// 	tpl.ExecuteTemplate(w, "limit.gohtml", u)
+	
+// }
+
+
 
 func read(w http.ResponseWriter, req *http.Request) {
 	var u user
+	m := mux.Vars(req)
+	fmt.Println(m["l"])
+	fmt.Println(m["o"])
+	l, _ := strconv.Atoi(m["l"])
+	o, _ := strconv.Atoi(m["o"])
+
+
+
 	_= json.NewDecoder(req.Body).Decode(&u)
-	
-	d:= getUser(w, req)
+	// fmt.Println(u)
+
+
+	// _= getUser(w, req)
+
 	if !alreadyLoggedIn(req) {
 		http.Redirect(w, req, "/", http.StatusSeeOther)
 		return
 	}
-	tpl.ExecuteTemplate(w, "bar.gohtml", d)
+	fmt.Println("rached in read")
 
+	// if req.Method == http.MethodPost {
+	// 	l:=req.FormValue("limit")    //limit value
+	// 	o:=req.FormValue("offset")    //offset value
+	// 	fmt.Print("limit is ",l)
 
+	rows, b := db.Query("select * from users_data limit ? offset ?",l,o)
 
-	x, b := db.Query("select * from users_data")
-
-	for x.Next() {
+	for rows.Next() {
 		var u user
-		if err := x.Scan(&u.Id, &u.First_name,&u.Last_name,&u.Email,&u.Password,&u.Dob,&u.Created_at,&u.Last_access,&u.Updated_at,&u.Archived); err != nil {
+		if err := rows.Scan(&u.Id, &u.First_name,&u.Last_name,&u.Email,&u.Password,&u.Dob,&u.Created_at,&u.Last_access,&u.Updated_at,&u.Archived); err != nil {
 			log.Fatal(err)
 		}
 		uj, _ := json.Marshal(u)
@@ -158,14 +215,24 @@ func read(w http.ResponseWriter, req *http.Request) {
 	if b != nil {
 		fmt.Println("error found in read")
 	}
-	
+
+	// http.Redirect(w, req, "/r", http.StatusSeeOther)
+
+	// }	
+	// tpl.ExecuteTemplate(w, "limit.gohtml", u)
 }
+
+
+
+
+
+
 func delet(w http.ResponseWriter, req *http.Request) {
 	var u user
 	m := mux.Vars(req)
 	fmt.Println(m["mid"])
 	_= json.NewDecoder(req.Body).Decode(&u)
-	fmt.Println(u)
+	// fmt.Println(u)
 
 	x, _ := strconv.Atoi(m["mid"])
 	query := fmt.Sprintf("DELETE FROM users_data WHERE user_id=%d", x)
@@ -187,7 +254,7 @@ func delet(w http.ResponseWriter, req *http.Request) {
 // 	// fmt.Println(m["mid"])
 // 	err := json.NewDecoder(req.Body).Decode(&u)
 // 	// fmt.Println(u)
-// 	db, err := sql.Open("mysql", "admin:qwerty123@tcp(localhost:3306)/bookstore?charset=utf8")
+// 	db, err := sql.Open("mysql", "admin:qwerty123@tcp(localhost:3306)/users_data?charset=utf8")
 // 	if err != nil {
 // 		fmt.Println(err)
 // 	}
@@ -216,7 +283,7 @@ func delet(w http.ResponseWriter, req *http.Request) {
 // 	// fmt.Println(m["mid"])
 // 	err := json.NewDecoder(req.Body).Decode(&u)
 // 	// fmt.Println(u)
-// 	db, err := sql.Open("mysql", "admin:qwerty123@tcp(localhost:3306)/bookstore?charset=utf8")
+// 	db, err := sql.Open("mysql", "admin:qwerty123@tcp(localhost:3306)/users_data?charset=utf8")
 // 	if err != nil {
 // 		fmt.Println(err)
 // 	}

@@ -1,4 +1,0 @@
-2022/05/22 15:59:44 error found in create
- Error 1292: Incorrect date value: '' for column 'dob' at row 1
-2022/05/22 16:00:16 http: superfluous response.WriteHeader call from main.read (main.go:154)
-2022/05/22 16:00:16 http: superfluous response.WriteHeader call from main.read (main.go:154)
